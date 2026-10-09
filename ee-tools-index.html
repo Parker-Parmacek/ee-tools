@@ -1,0 +1,856 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light dark" />
+  <link rel="icon" href="data:," />
+  <title>EE Tools — Field Calculators for Electrical Engineers</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:#f4f2e9; --surface:#fbfaf5; --surface-2:#eceade; --ink:#141714; --muted:#5c635c;
+      --line:#d8d5c6; --line-strong:#141714; --amber:#f3aa2a; --yellow:#ffe457; --green:#1e7a4c;
+      --green-soft:#dcefe3; --red:#c93a22; --red-soft:#fbe3dc; --blue:#1d5fa8; --blue-soft:#ddebfb;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg:#101410; --surface:#171c17; --surface-2:#20261f; --ink:#f4f2e9; --muted:#a8b1a8;
+        --line:#2c332c; --line-strong:#e5e8df; --green:#54c59e; --green-soft:#1b2b23;
+        --red:#ff6a4d; --red-soft:#331b14; --blue:#7ac7e7; --blue-soft:#16262e;
+      }
+    }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; -webkit-text-size-adjust:100%; }
+    body { margin:0; min-width:320px; overflow-x:clip; background:var(--bg); color:var(--ink);
+      font-family:"IBM Plex Sans",system-ui,sans-serif; line-height:1.5; }
+    .page { width:min(1060px,100%); margin:0 auto; padding:0 18px 80px; }
+
+    .topbar { border-bottom:2px solid var(--line-strong); padding:26px 0 18px; display:flex;
+      flex-wrap:wrap; gap:14px; align-items:flex-end; justify-content:space-between; }
+    .brand { display:flex; align-items:center; gap:12px; }
+    .brand-mark { width:44px; height:44px; border-radius:12px; background:var(--ink); color:var(--bg);
+      display:grid; place-items:center; font-size:24px; flex:none; }
+    .brand h1 { margin:0; font-size:30px; letter-spacing:-.01em; }
+    .brand p { margin:2px 0 0; color:var(--muted); font-size:14px; }
+    .sister-link { display:inline-block; padding:10px 16px; border:1px solid var(--line-strong); border-radius:999px;
+      color:inherit; text-decoration:none; font:600 12px "IBM Plex Mono",monospace; white-space:nowrap; }
+    .sister-link:hover { background:var(--ink); color:var(--bg); }
+
+    .toolnav { position:sticky; top:0; z-index:10; background:color-mix(in srgb,var(--bg) 92%,transparent);
+      backdrop-filter:blur(8px); border-bottom:1px solid var(--line); margin:0 -18px; padding:10px 18px; }
+    .toolnav-row { display:flex; gap:8px; overflow-x:auto; padding-bottom:2px; scrollbar-width:thin; }
+    .tool-chip { flex:none; padding:9px 14px; border:1px solid var(--line); border-radius:999px; background:var(--surface);
+      color:inherit; text-decoration:none; font:600 11px "IBM Plex Mono",monospace; white-space:nowrap; }
+    .tool-chip:hover { border-color:var(--ink); }
+
+    .tool { background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:22px;
+      margin-top:22px; scroll-margin-top:76px; }
+    .tool-head { display:flex; flex-wrap:wrap; gap:8px 14px; align-items:baseline; justify-content:space-between;
+      border-bottom:1px solid var(--line); padding-bottom:12px; margin-bottom:16px; }
+    .tool-head h2 { margin:0; font-size:22px; }
+    .tool-head h2 .t-num { color:var(--muted); font:600 12px "IBM Plex Mono",monospace; display:block; margin-bottom:4px; }
+    .nec-ref { font:600 10px "IBM Plex Mono",monospace; color:var(--muted); border:1px solid var(--line);
+      border-radius:6px; padding:5px 9px; white-space:nowrap; }
+    .tool-desc { margin:0 0 16px; color:var(--muted); font-size:14px; max-width:70ch; }
+
+    .tool-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; }
+    .field { display:grid; gap:6px; }
+    .field label { font:600 10px/1.3 "IBM Plex Mono",monospace; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); }
+    .field input, .field select { width:100%; min-height:48px; padding:10px 12px; border:1px solid var(--line-strong);
+      border-radius:8px; background:var(--bg); color:inherit; font:600 15px "IBM Plex Sans",sans-serif; }
+    .field input:focus, .field select:focus { outline:2px solid var(--amber); outline-offset:1px; }
+    .seg { display:flex; border:1px solid var(--line-strong); border-radius:8px; overflow:hidden; }
+    .seg button { flex:1; min-height:48px; border:0; border-right:1px solid var(--line-strong); background:var(--bg);
+      color:inherit; font:600 12px "IBM Plex Mono",monospace; cursor:pointer; padding:8px 6px; }
+    .seg button:last-child { border-right:0; }
+    .seg button[aria-pressed="true"] { background:var(--ink); color:var(--bg); }
+
+    .results { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:0; margin-top:16px;
+      border:1px solid var(--line-strong); border-radius:10px; overflow:hidden; }
+    .result { padding:13px 14px; background:var(--surface-2); min-width:0; }
+    .result + .result { border-left:1px solid var(--line); }
+    .result span { display:block; font:600 9px/1.3 "IBM Plex Mono",monospace; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
+    .result output { display:block; margin-top:5px; font:700 20px "IBM Plex Mono",monospace; overflow-wrap:anywhere; }
+    .result.hero { background:var(--ink); color:var(--bg); }
+    .result.hero span { color:var(--muted); }
+    @media (prefers-color-scheme: dark) { .result.hero span { color:#a8b1a8; } }
+
+    .verdict { margin-top:14px; padding:12px 14px; border-radius:10px; font-size:14px; }
+    .verdict strong { display:block; margin-bottom:2px; }
+    .verdict.ok { background:var(--green-soft); color:var(--green); }
+    .verdict.warn { background:var(--red-soft); color:var(--red); }
+    .verdict.info { background:var(--blue-soft); color:var(--blue); }
+    .verdict p { margin:4px 0 0; font-size:13px; }
+
+    .note { margin-top:14px; padding:12px 14px; background:var(--surface-2); border-radius:10px;
+      color:var(--muted); font-size:12.5px; }
+    .note strong { color:var(--ink); }
+    .formula { font-family:"IBM Plex Mono",monospace; font-size:12.5px; }
+
+    .wire-rows { display:grid; gap:8px; margin-top:4px; }
+    .wire-row { display:grid; grid-template-columns:1fr 1fr 64px 40px; gap:8px; align-items:end; }
+    .wire-row .field input, .wire-row .field select { min-height:44px; font-size:14px; }
+    .icon-btn { min-height:44px; border:1px solid var(--line-strong); border-radius:8px; background:var(--bg);
+      color:inherit; font-size:18px; cursor:pointer; }
+    .icon-btn:hover { background:var(--ink); color:var(--bg); }
+    .add-row-btn { margin-top:10px; width:100%; min-height:46px; border:1px dashed var(--line-strong); border-radius:8px;
+      background:transparent; color:inherit; font:600 12px "IBM Plex Mono",monospace; cursor:pointer; }
+    .add-row-btn:hover { background:var(--surface-2); }
+
+    footer.disclaimer { margin-top:28px; padding:18px; border:1px solid var(--line); border-radius:12px;
+      color:var(--muted); font-size:13px; }
+    footer.disclaimer strong { color:var(--ink); }
+
+    @media (max-width:560px) {
+      .tool { padding:16px 14px; }
+      .brand h1 { font-size:24px; }
+      .results { grid-template-columns:1fr 1fr; }
+      .result:nth-child(3) { border-left:0; border-top:1px solid var(--line); }
+      .result:nth-child(4) { border-top:1px solid var(--line); }
+      .wire-row { grid-template-columns:1fr 1fr 56px 40px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">⚡</div>
+        <div>
+          <h1>EE Tools</h1>
+          <p>Field calculators for power distribution work</p>
+        </div>
+      </div>
+      <a class="sister-link" href="https://parker-parmacek.github.io/ee-learning-app/">← EE Learning App</a>
+    </header>
+
+    <nav class="toolnav" aria-label="Tools">
+      <div class="toolnav-row">
+        <a class="tool-chip" href="#tool-fault">Fault current</a>
+        <a class="tool-chip" href="#tool-power">AC power</a>
+        <a class="tool-chip" href="#tool-vd">Voltage drop</a>
+        <a class="tool-chip" href="#tool-kva">kVA ⇄ amps</a>
+        <a class="tool-chip" href="#tool-fill">Conduit fill</a>
+        <a class="tool-chip" href="#tool-ampacity">Ampacity</a>
+        <a class="tool-chip" href="#tool-motor">Motor circuits</a>
+        <a class="tool-chip" href="#tool-pf">PF correction</a>
+        <a class="tool-chip" href="#tool-xfmr">Transformer OCPD</a>
+        <a class="tool-chip" href="#tool-box">Pull boxes</a>
+        <a class="tool-chip" href="#tool-ground">Grounding</a>
+      </div>
+    </nav>
+
+    <main>
+      <!-- 01 FAULT CURRENT -->
+      <section class="tool" id="tool-fault" aria-labelledby="tool-fault-h">
+        <div class="tool-head">
+          <h2 id="tool-fault-h"><span class="t-num">TOOL 01</span>Transformer fault current</h2>
+          <span class="nec-ref">Infinite-bus method</span>
+        </div>
+        <p class="tool-desc">Upper-bound symmetrical RMS fault current at a transformer secondary, treating the primary as an infinite bus. First-pass check for equipment interrupting ratings — not a substitute for a full short-circuit study.</p>
+        <div class="tool-grid">
+          <div class="field"><label for="fKva">Transformer rating</label><input id="fKva" type="number" min="1" step="1" value="1500" inputmode="decimal"></div>
+          <div class="field"><label for="fVolt">Secondary voltage L–L (V)</label><input id="fVolt" type="number" min="1" step="1" value="480" inputmode="decimal"></div>
+          <div class="field"><label for="fZ">Nameplate impedance (%Z)</label><input id="fZ" type="number" min="0.1" max="20" step="0.01" value="5.75" inputmode="decimal"></div>
+        </div>
+        <div class="results" aria-live="polite">
+          <div class="result"><span>Full-load current</span><output id="fFlaOut">—</output></div>
+          <div class="result hero"><span>Available fault current</span><output id="fIscOut">—</output></div>
+          <div class="result"><span>Fault MVA</span><output id="fMvaOut">—</output></div>
+        </div>
+        <div class="note"><span class="formula"><strong>I<sub>FL</sub></strong> = kVA × 1000 ÷ (√3 × V<sub>LL</sub>) · <strong>I<sub>SC</sub></strong> = I<sub>FL</sub> ÷ (%Z ÷ 100)</span><br><br>Ignores source impedance, conductor impedance, impedance tolerance, and motor contribution. Always verify against a complete system model before specifying equipment.</div>
+      </section>
+
+      <!-- 02 AC POWER -->
+      <section class="tool" id="tool-power" aria-labelledby="tool-power-h">
+        <div class="tool-head">
+          <h2 id="tool-power-h"><span class="t-num">TOOL 02</span>AC power calculator</h2>
+          <span class="nec-ref">Balanced loads</span>
+        </div>
+        <p class="tool-desc">Convert voltage, current, and power factor into real, apparent, and reactive power.</p>
+        <div class="tool-grid">
+          <div class="field"><label>System</label>
+            <div class="seg" role="group" aria-label="Phases">
+              <button type="button" data-pw-phase="3" aria-pressed="true">3-PHASE</button>
+              <button type="button" data-pw-phase="1" aria-pressed="false">1-PHASE</button>
+            </div>
+          </div>
+          <div class="field"><label for="pwV" id="pwVLabel">Line-to-line voltage (V)</label><input id="pwV" type="number" min="0" step="1" value="480" inputmode="decimal"></div>
+          <div class="field"><label for="pwI">Line current (A)</label><input id="pwI" type="number" min="0" step="0.1" value="120" inputmode="decimal"></div>
+          <div class="field"><label for="pwPf">Power factor</label><input id="pwPf" type="number" min="0" max="1" step="0.01" value="0.90" inputmode="decimal"></div>
+        </div>
+        <div class="results" aria-live="polite">
+          <div class="result hero"><span>Real power</span><output id="pwKwOut">—</output></div>
+          <div class="result"><span>Apparent power</span><output id="pwKvaOut">—</output></div>
+          <div class="result"><span>Reactive power</span><output id="pwKvarOut">—</output></div>
+        </div>
+        <div class="note"><span class="formula">3φ: S = √3 × V<sub>LL</sub> × I ÷ 1000 · 1φ: S = V × I ÷ 1000 · P = S × PF · Q = S × √(1 − PF²)</span></div>
+      </section>
+
+      <!-- 03 VOLTAGE DROP -->
+      <section class="tool" id="tool-vd" aria-labelledby="tool-vd-h">
+        <div class="tool-head">
+          <h2 id="tool-vd-h"><span class="t-num">TOOL 03</span>Voltage drop</h2>
+          <span class="nec-ref">NEC 210.19(A) / 215.2(A) notes</span>
+        </div>
+        <p class="tool-desc">Quick branch/feeder voltage drop check. Design guidance targets ≤3% on a feeder or branch circuit and ≤5% combined.</p>
+        <div class="tool-grid">
+          <div class="field"><label for="vdSys">System</label>
+            <select id="vdSys">
+              <option value="120,1" >120 V · 1φ</option>
+              <option value="240,1">120/240 V · 1φ</option>
+              <option value="208,3" selected>208Y/120 V · 3φ</option>
+              <option value="240,3">240 V Δ · 3φ</option>
+              <option value="480,3">480Y/277 V · 3φ</option>
+              <option value="600,3">600Y/347 V · 3φ</option>
+            </select>
+          </div>
+          <div class="field"><label for="vdFt">One-way distance (ft)</label><input id="vdFt" type="number" min="1" step="1" value="150" inputmode="decimal"></div>
+          <div class="field"><label for="vdAmps">Load current (A)</label><input id="vdAmps" type="number" min="0.1" step="0.1" value="80" inputmode="decimal"></div>
+          <div class="field"><label for="vdSize">Conductor</label><select id="vdSize"></select></div>
+          <div class="field"><label>Material</label>
+            <div class="seg" role="group" aria-label="Conductor material">
+              <button type="button" data-vd-mat="cu" aria-pressed="true">COPPER</button>
+              <button type="button" data-vd-mat="al" aria-pressed="false">ALUMINUM</button>
+            </div>
+          </div>
+        </div>
+        <div class="results" aria-live="polite">
+          <div class="result hero"><span>Voltage drop</span><output id="vdPctOut">—</output></div>
+          <div class="result"><span>Drop (volts)</span><output id="vdVoltsOut">—</output></div>
+          <div class="result"><span>At load</span><output id="vdRecvOut">—</output></div>
+        </div>
+        <div class="verdict info" id="vdVerdict" hidden><strong id="vdVerdictTitle"></strong><p id="vdVerdictCopy"></p></div>
+        <div class="note"><span class="formula">1φ: V<sub>D</sub> = 2 × K × I × L ÷ CM · 3φ: V<sub>D</sub> = √3 × K × I × L ÷ CM</span> · K = 12.9 (Cu) / 21.2 (Al) Ω·cmil/ft · L = one-way length. Simplified resistive model — ignores reactance and temperature effects.</div>
+      </section>
+
+      <!-- 04 KVA/AMPS -->
+      <section class="tool" id="tool-kva" aria-labelledby="tool-kva-h">
+        <div class="tool-head">
+          <h2 id="tool-kva-h"><span class="t-num">TOOL 04</span>kVA ⇄ amps converter</h2>
+          <span class="nec-ref">Quick conversion</span>
+        </div>
+        <p class="tool-desc">Two-way conversion between apparent power and current.</p>
+        <div class="tool-grid">
+          <div class="field"><label>Direction</label>
+            <div class="seg" role="group" aria-label="Conversion direction">
+              <button type="button" data-kva-dir="toA" aria-pressed="true">kVA → A</button>
+              <button type="button" data-kva-dir="toKva" aria-pressed="false">A → kVA</button>
+            </div>
+          </div>
+          <div class="field"><label>System</label>
+            <div class="seg" role="group" aria-label="Phases">
+              <button type="button" data-kva-ph="3" aria-pressed="true">3-PHASE</button>
+              <button type="button" data-kva-ph="1" aria-pressed="false">1-PHASE</button>
+            </div>
+          </div>
+          <div class="field"><label for="kvaV" id="kvaVLabel">Voltage L–L (V)</label><input id="kvaV" type="number" min="1" step="1" value="480" inputmode="decimal"></div>
+          <div class="field"><label for="kvaIn" id="kvaInLabel">Apparent power (kVA)</label><input id="kvaIn" type="number" min="0" step="0.1" value="150" inputmode="decimal"></div>
+        </div>
+        <div class="results" aria-live="polite">
+          <div class="result hero"><span id="kvaOutLabel">Current</span><output id="kvaOut">—</output></div>
+        </div>
+      </section>
+      <!-- 05 CONDUIT FILL -->
+      <section class="tool" id="tool-fill" aria-labelledby="tool-fill-h">
+        <div class="tool-head">
+          <h2 id="tool-fill-h"><span class="t-num">TOOL 05</span>Conduit fill</h2>
+          <span class="nec-ref">NEC Ch. 9 · Tables 1, 4, 5</span>
+        </div>
+        <p class="tool-desc">Check raceway fill for copper THHN/THWN-2 conductors. Limits: 53% for one conductor, 31% for two, 40% for three or more.</p>
+        <div class="tool-grid">
+          <div class="field"><label for="cfType">Conduit type</label>
+            <select id="cfType">
+              <option value="emt" selected>EMT</option>
+              <option value="rmc">Rigid metal (RMC)</option>
+              <option value="pvc40">PVC Sch 40</option>
+              <option value="pvc80">PVC Sch 80</option>
+            </select>
+          </div>
+          <div class="field"><label for="cfSize">Trade size (in)</label>
+            <select id="cfSize">
+              <option>1/2</option><option>3/4</option><option selected>1</option><option>1-1/4</option>
+              <option>1-1/2</option><option>2</option><option>2-1/2</option><option>3</option>
+              <option>3-1/2</option><option>4</option>
+            </select>
+          </div>
+        </div>
+        <div class="wire-rows" id="cfRows" style="margin-top:12px"></div>
+        <button class="add-row-btn" id="cfAdd" type="button">+ Add conductor set</button>
+        <div class="results" aria-live="polite">
+          <div class="result hero"><span>Fill</span><output id="cfPctOut">—</output></div>
+          <div class="result"><span>Conductors area</span><output id="cfAreaOut">—</output></div>
+          <div class="result"><span>Conduit area</span><output id="cfCondOut">—</output></div>
+          <div class="result"><span>Allowed at 40%</span><output id="cfMaxOut">—</output></div>
+        </div>
+        <div class="verdict" id="cfVerdict" hidden><strong id="cfVerdictTitle"></strong><p id="cfVerdictCopy"></p></div>
+        <div class="note">Areas from NEC Chapter 9 Table 4 (conduit) and Table 5 (THHN conductors, copper). Nipples ≤24 in. long follow the 60% rule — size those separately.</div>
+      </section>
+
+      <!-- 06 AMPACITY -->
+      <section class="tool" id="tool-ampacity" aria-labelledby="tool-ampacity-h">
+        <div class="tool-head">
+          <h2 id="tool-ampacity-h"><span class="t-num">TOOL 06</span>Conductor ampacity + derating</h2>
+          <span class="nec-ref">NEC 310.16 · 310.15</span>
+        </div>
+        <p class="tool-desc">Base ampacity with ambient-temperature correction and adjustment for more than three current-carrying conductors.</p>
+        <div class="tool-grid">
+          <div class="field"><label for="amSize">Conductor size</label><select id="amSize"></select></div>
+          <div class="field"><label>Material</label>
+            <div class="seg" role="group" aria-label="Conductor material">
+              <button type="button" data-am-mat="cu" aria-pressed="true">COPPER</button>
+              <button type="button" data-am-mat="al" aria-pressed="false">ALUMINUM</button>
+            </div>
+          </div>
+          <div class="field"><label for="amTemp">Temp rating</label>
+            <select id="amTemp">
+              <option value="60">60 °C</option>
+              <option value="75" selected>75 °C</option>
+              <option value="90">90 °C</option>
+            </select>
+          </div>
+          <div class="field"><label for="amAmb">Ambient (°C)</label>
+            <select id="amAmb">
+              <option>30</option><option>35</option><option>40</option><option>45</option><option>50</option><option>55</option><option>60</option>
+            </select>
+          </div>
+          <div class="field"><label for="amCount">Current-carrying conductors</label><input id="amCount" type="number" min="1" max="60" step="1" value="3" inputmode="numeric"></div>
+        </div>
+        <div class="results" aria-live="polite">
+          <div class="result hero"><span>Derated ampacity</span><output id="amOut">—</output></div>
+          <div class="result"><span>Table base</span><output id="amBaseOut">—</output></div>
+          <div class="result"><span>Temp correction</span><output id="amCorrOut">—</output></div>
+          <div class="result"><span>Adjustment</span><output id="amAdjOut">—</output></div>
+        </div>
+        <div class="note" id="amNote">Per 240.4(D), small conductors are limited to 15 A (#14 Cu), 20 A (#12 Cu/Al), 30 A (#10 Cu) for overcurrent protection regardless of the derated value. Derating uses the conductor's temperature rating column; final ampacity cannot exceed the lowest termination rating.</div>
+      </section>
+
+      <!-- 07 MOTOR -->
+      <section class="tool" id="tool-motor" aria-labelledby="tool-motor-h">
+        <div class="tool-head">
+          <h2 id="tool-motor-h"><span class="t-num">TOOL 07</span>Motor branch circuit</h2>
+          <span class="nec-ref">NEC 430.6 · 430.22 · 430.52</span>
+        </div>
+        <p class="tool-desc">Full-load current from the NEC tables, minimum branch-circuit conductor (125%), and maximum short-circuit/ground-fault protective device.</p>
+        <div class="tool-grid">
+          <div class="field"><label for="moHp">Motor HP</label>
+            <select id="moHp">
+              <option>0.5</option><option>0.75</option><option>1</option><option>1.5</option><option>2</option>
+              <option>3</option><option selected>5</option><option>7.5</option><option>10</option><option>15</option>
+              <option>20</option><option>25</option><option>30</option><option>40</option><option>50</option>
+              <option>60</option><option>75</option><option>100</option><option>125</option><option>150</option><option>200</option>
+            </select>
+          </div>
+          <div class="field"><label>Phases</label>
+            <div class="seg" role="group" aria-label="Motor phases">
+              <button type="button" data-mo-ph="3" aria-pressed="true">3-PHASE</button>
+              <button type="button" data-mo-ph="1" aria-pressed="false">1-PHASE</button>
+            </div>
+          </div>
+          <div class="field"><label for="moV">Voltage (V)</label>
+            <select id="moV">
+              <option>208</option><option>230</option><option selected>460</option><option>575</option>
+            </select>
+          </div>
+        </div>
+        <div class="results" aria-live="polite">
+          <div class="result hero"><span>Full-load current</span><output id="moFlaOut">—</output></div>
+          <div class="result"><span>Conductor min (125%)</span><output id="moCondOut">—</output></div>
+          <div class="result"><span>Max breaker (250%)</span><output id="moBrkOut">—</output></div>
+          <div class="result"><span>Max TD fuse (175%)</span><output id="moFuseOut">—</output></div>
+        </div>
+        <div class="note">FLA from NEC Tables 430.248 / 430.250 (use table values, not nameplate, per 430.6(A)(1)). Conductors ≥125% FLA per 430.22. OCPD per Table 430.52 — inverse-time breaker 250%, dual-element/time-delay fuse 175%, non-time-delay fuse 300%. Overload protection (430.32) is separate.</div>
+      </section>
+      <!-- 08 PF CORRECTION -->
+      <section class="tool" id="tool-pf" aria-labelledby="tool-pf-h">
+        <div class="tool-head">
+          <h2 id="tool-pf-h"><span class="t-num">TOOL 08</span>Power factor correction</h2>
+          <span class="nec-ref">Capacitor sizing</span>
+        </div>
+        <p class="tool-desc">Capacitor kVAR needed to lift a load from its present power factor to a target.</p>
+        <div class="tool-grid">
+          <div class="field"><label for="pfKw">Real power (kW)</label><input id="pfKw" type="number" min="0" step="1" value="200" inputmode="decimal"></div>
+          <div class="field"><label for="pf1">Present PF</label><input id="pf1" type="number" min="0.1" max="1" step="0.01" value="0.78" inputmode="decimal"></div>
+          <div class="field"><label for="pf2">Target PF</label><input id="pf2" type="number" min="0.1" max="1" step="0.01" value="0.95" inputmode="decimal"></div>
+        </div>
+        <div class="results" aria-live="polite">
+          <div class="result hero"><span>Capacitor needed</span><output id="pfKvarOut">—</output></div>
+          <div class="result"><span>Present kVA</span><output id="pfKva1Out">—</output></div>
+          <div class="result"><span>Corrected kVA</span><output id="pfKva2Out">—</output></div>
+        </div>
+        <div class="note"><span class="formula">kVAR = kW × (tan(cos⁻¹PF₁) − tan(cos⁻¹PF₂))</span><br><br>Avoid over-correction past unity — leading power factor can cause resonance and overvoltage. Verify capacitor duty and switching with the equipment vendor.</div>
+      </section>
+
+      <!-- 09 TRANSFORMER OCPD -->
+      <section class="tool" id="tool-xfmr" aria-labelledby="tool-xfmr-h">
+        <div class="tool-head">
+          <h2 id="tool-xfmr-h"><span class="t-num">TOOL 09</span>Transformer protection</h2>
+          <span class="nec-ref">NEC 450.3(B) · ≤1000 V</span>
+        </div>
+        <p class="tool-desc">Full-load currents and maximum primary/secondary overcurrent protection for transformers rated 1000 V and less.</p>
+        <div class="tool-grid">
+          <div class="field"><label for="xfKva">Transformer (kVA)</label>
+            <select id="xfKva">
+              <option>15</option><option>30</option><option>45</option><option selected>75</option><option>112.5</option>
+              <option>150</option><option>225</option><option>300</option><option>500</option><option>750</option>
+              <option>1000</option><option>1500</option><option>2000</option><option>2500</option>
+            </select>
+          </div>
+          <div class="field"><label>Phases</label>
+            <div class="seg" role="group" aria-label="Transformer phases">
+              <button type="button" data-xf-ph="3" aria-pressed="true">3-PHASE</button>
+              <button type="button" data-xf-ph="1" aria-pressed="false">1-PHASE</button>
+            </div>
+          </div>
+          <div class="field"><label for="xfPri">Primary voltage (V)</label><input id="xfPri" type="number" min="1" step="1" value="480" inputmode="decimal"></div>
+          <div class="field"><label for="xfSec">Secondary voltage (V)</label><input id="xfSec" type="number" min="1" step="1" value="208" inputmode="decimal"></div>
+        </div>
+        <div class="results" aria-live="polite">
+          <div class="result"><span>Primary FLA</span><output id="xfPriFlaOut">—</output></div>
+          <div class="result"><span>Secondary FLA</span><output id="xfSecFlaOut">—</output></div>
+          <div class="result hero"><span>Max primary OCPD</span><output id="xfPriOcOut">—</output></div>
+          <div class="result hero"><span>Max secondary OCPD</span><output id="xfSecOcOut">—</output></div>
+        </div>
+        <div class="note">Per 450.3(B): each side protected at ≤125% of FLA, next standard size up permitted (240.6). Currents under 9 A have separate allowances — this tool covers general cases; check 450.3(B) exceptions for small transformers.</div>
+      </section>
+
+      <!-- 10 PULL BOX -->
+      <section class="tool" id="tool-box" aria-labelledby="tool-box-h">
+        <div class="tool-head">
+          <h2 id="tool-box-h"><span class="t-num">TOOL 10</span>Pull / junction box sizing</h2>
+          <span class="nec-ref">NEC 314.28(A)</span>
+        </div>
+        <p class="tool-desc">Minimum box dimensions for raceways containing 4 AWG and larger conductors.</p>
+        <div class="tool-grid">
+          <div class="field"><label>Pull type</label>
+            <div class="seg" role="group" aria-label="Pull type">
+              <button type="button" data-bx-type="straight" aria-pressed="true">STRAIGHT</button>
+              <button type="button" data-bx-type="angle" aria-pressed="false">ANGLE / U</button>
+            </div>
+          </div>
+          <div class="field"><label for="bxLargest">Largest raceway (in)</label>
+            <select id="bxLargest">
+              <option>1/2</option><option>3/4</option><option>1</option><option>1-1/4</option>
+              <option>1-1/2</option><option selected>2</option><option>2-1/2</option><option>3</option>
+              <option>3-1/2</option><option>4</option>
+            </select>
+          </div>
+          <div class="field" id="bxOthersWrap" hidden><label for="bxOthers">Other raceways, same wall (in, comma-sep)</label><input id="bxOthers" type="text" value="1-1/2, 1" inputmode="decimal"></div>
+        </div>
+        <div class="results" aria-live="polite">
+          <div class="result hero"><span>Min box dimension</span><output id="bxOut">—</output></div>
+          <div class="result"><span>Rule applied</span><output id="bxRuleOut">—</output></div>
+        </div>
+        <div class="note" id="bxNote"><strong>Straight pull:</strong> length ≥ 8 × trade diameter of the largest raceway. <strong>Angle/U pull:</strong> distance from entry to opposite wall ≥ 6 × largest raceway + sum of other raceways on the same wall; entries with the same conductor ≥ 6 × apart. For combinations, size each direction per its pull type.</div>
+      </section>
+
+      <!-- 11 GROUNDING -->
+      <section class="tool" id="tool-ground" aria-labelledby="tool-ground-h">
+        <div class="tool-head">
+          <h2 id="tool-ground-h"><span class="t-num">TOOL 11</span>Grounding conductors</h2>
+          <span class="nec-ref">NEC 250.66 · 250.122</span>
+        </div>
+        <p class="tool-desc">Grounding electrode conductor from service-entrance size, and equipment grounding conductor from OCPD rating (copper).</p>
+        <div class="tool-grid">
+          <div class="field"><label for="grSvc">Largest service conductor</label><select id="grSvc"></select></div>
+          <div class="field"><label for="grOcpd">OCPD rating (A)</label>
+            <select id="grOcpd">
+              <option>15</option><option>20</option><option>30</option><option>40</option><option>50</option>
+              <option>60</option><option selected>100</option><option>200</option><option>300</option><option>400</option>
+              <option>500</option><option>600</option><option>800</option><option>1000</option><option>1200</option>
+              <option>1600</option><option>2000</option><option>2500</option><option>3000</option><option>4000</option>
+              <option>5000</option><option>6000</option>
+            </select>
+          </div>
+        </div>
+        <div class="results" aria-live="polite">
+          <div class="result hero"><span>GEC · 250.66</span><output id="grGecOut">—</output></div>
+          <div class="result hero"><span>EGC · 250.122</span><output id="grEgcOut">—</output></div>
+        </div>
+        <div class="note">GEC sized from the largest ungrounded service-entrance conductor per Table 250.66. EGC sized from the OCPD rating per Table 250.122. Both tables assume copper — aluminum equivalents differ. Bonding jumpers and special occupancies have additional rules.</div>
+      </section>
+    </main>
+
+    <footer class="disclaimer">
+      <strong>Reference only.</strong> These tools implement common NEC-based calculations for quick field checks and learning. They simplify or omit exceptions, special occupancies, and AHJ amendments. Always verify results against the current adopted code and with the authority having jurisdiction before designing, installing, or labeling anything.
+    </footer>
+  </div>
+  <script>
+  (function () {
+    'use strict';
+    function $(id) { return document.getElementById(id); }
+    function num(el, fb) { var v = parseFloat(el.value); return Number.isFinite(v) ? v : fb; }
+    function fmt(n, d) {
+      if (!Number.isFinite(n)) return '—';
+      return n.toLocaleString('en-US', { maximumFractionDigits: d === undefined ? 1 : d, minimumFractionDigits: 0 });
+    }
+    function on(ids, evt, fn) { ids.forEach(function (id) { $(id).addEventListener(evt, fn); }); }
+    function segState(attr, btn) {
+      document.querySelectorAll('[' + attr + ']').forEach(function (b) {
+        b.setAttribute('aria-pressed', b === btn ? 'true' : 'false');
+      });
+      return btn.dataset[Object.keys(btn.dataset).find(function (k) { return attr === 'data-' + k.replace(/[A-Z]/g, function (c) { return '-' + c.toLowerCase(); }); })];
+    }
+
+    /* ---------- NEC data ---------- */
+    // Conduit internal diameters (in), NEC Chapter 9 Table 4
+    var CONDUIT_ID = {
+      emt:   {'1/2':0.622,'3/4':0.824,'1':1.049,'1-1/4':1.380,'1-1/2':1.610,'2':2.067,'2-1/2':2.469,'3':3.068,'3-1/2':3.548,'4':4.026},
+      rmc:   {'1/2':0.632,'3/4':0.836,'1':1.063,'1-1/4':1.394,'1-1/2':1.624,'2':2.083,'2-1/2':2.489,'3':3.090,'3-1/2':3.570,'4':4.050},
+      pvc40: {'1/2':0.602,'3/4':0.804,'1':1.029,'1-1/4':1.360,'1-1/2':1.590,'2':2.047,'2-1/2':2.445,'3':3.042,'3-1/2':3.521,'4':3.998},
+      pvc80: {'1/2':0.546,'3/4':0.742,'1':0.957,'1-1/4':1.278,'1-1/2':1.500,'2':1.939,'2-1/2':2.323,'3':2.900,'3-1/2':3.364,'4':3.826}
+    };
+    // THHN/THWN-2 copper conductor areas (in^2), NEC Chapter 9 Table 5
+    var CU_AREA = {'14':0.0097,'12':0.0133,'10':0.0211,'8':0.0366,'6':0.0507,'4':0.0824,'3':0.0973,'2':0.1158,'1':0.1562,'1/0':0.1855,'2/0':0.2223,'3/0':0.2679,'4/0':0.3278,'250':0.4026,'300':0.4729,'350':0.5242,'400':0.5782,'500':0.7073,'600':0.8676,'750':1.0496};
+    var WIRE_SIZES = ['14','12','10','8','6','4','3','2','1','1/0','2/0','3/0','4/0','250','300','350','400','500','600','750'];
+    // Table 310.16 ampacities: size -> {cu:{60,75,90}, al:{60,75,90}}
+    var AMP = {
+      '14':{cu:[15,20,25],al:null},'12':{cu:[20,25,30],al:[15,20,25]},'10':{cu:[30,35,40],al:[25,30,35]},
+      '8':{cu:[40,50,55],al:[30,40,45]},'6':{cu:[55,65,75],al:[40,50,60]},'4':{cu:[70,85,95],al:[55,65,75]},
+      '3':{cu:[85,100,115],al:[65,75,85]},'2':{cu:[95,115,130],al:[75,90,100]},'1':{cu:[110,130,145],al:[85,100,115]},
+      '1/0':{cu:[125,150,170],al:[100,120,135]},'2/0':{cu:[145,175,195],al:[115,135,150]},'3/0':{cu:[165,200,225],al:[130,155,175]},
+      '4/0':{cu:[195,230,260],al:[150,180,205]},'250':{cu:[215,255,290],al:[170,205,230]},'300':{cu:[240,285,320],al:[190,230,255]},
+      '350':{cu:[260,310,350],al:[210,250,280]},'400':{cu:[280,335,380],al:[225,270,305]},'500':{cu:[320,380,430],al:[260,310,350]},
+      '600':{cu:[350,420,475],al:[285,350,385]},'750':{cu:[400,475,535],al:[320,385,425]}
+    };
+    // Ambient correction, Table 310.15(B)(1): temp rating -> {ambientC: factor}
+    var AMB_CORR = {
+      '75':{30:1.00,35:0.94,40:0.88,45:0.82,50:0.75,55:0.67,60:0.58},
+      '90':{30:1.00,35:0.96,40:0.91,45:0.87,50:0.82,55:0.76,60:0.71}
+    };
+    function adjFactor(n) {
+      if (n <= 3) return 1.00;
+      if (n <= 6) return 0.80; if (n <= 9) return 0.70; if (n <= 20) return 0.50;
+      if (n <= 30) return 0.45; if (n <= 40) return 0.40; return 0.35;
+    }
+    // 3-phase motor FLA at 460 V, NEC Table 430.250
+    var MOTOR_FLA_460 = {'0.5':1.1,'0.75':1.6,'1':2.1,'1.5':3.0,'2':3.4,'3':4.8,'5':7.6,'7.5':11,'10':14,'15':21,'20':27,'25':34,'30':40,'40':52,'50':65,'60':77,'75':96,'100':124,'125':156,'150':180,'200':240};
+    // 1-phase motor FLA at 230 V, NEC Table 430.248
+    var MOTOR_FLA_230_1P = {'0.5':4.9,'0.75':6.9,'1':8,'1.5':10,'2':12,'3':17,'5':28,'7.5':40,'10':50};
+    var STD_OCPD = [15,20,25,30,35,40,45,50,60,70,80,90,100,110,125,150,175,200,225,250,300,350,400,450,500,600,700,800,1000,1200,1600,2000,2500,3000,4000,5000,6000];
+    function nextStdUp(a) { for (var i = 0; i < STD_OCPD.length; i++) if (STD_OCPD[i] >= a - 1e-9) return STD_OCPD[i]; return '—'; }
+    // Table 250.66 GEC (copper) by largest service conductor
+    function gec25066(svc) {
+      var order = ['14','12','10','8','6','4','3','2','1','1/0','2/0','3/0','4/0','250','300','350','400','500','600','750'];
+      var i = order.indexOf(svc);
+      if (i <= order.indexOf('2')) return '8 AWG Cu';
+      if (i <= order.indexOf('1/0')) return '6 AWG Cu';
+      if (i <= order.indexOf('3/0')) return '4 AWG Cu';
+      if (i <= order.indexOf('350')) return '2 AWG Cu';
+      if (i <= order.indexOf('600')) return '1/0 Cu';
+      if (i <= order.indexOf('750')) return '2/0 Cu';
+      return '3/0 Cu';
+    }
+    // Table 250.122 EGC (copper) by OCPD rating
+    function egc250122(ocpd) {
+      var t = [[15,'14 AWG'],[20,'12 AWG'],[30,'10 AWG'],[60,'10 AWG'],[100,'8 AWG'],[200,'6 AWG'],[300,'4 AWG'],[400,'3 AWG'],[500,'2 AWG'],[600,'1 AWG'],[800,'1/0'],[1000,'2/0'],[1200,'3/0'],[1600,'4/0'],[2000,'250 kcmil'],[2500,'350 kcmil'],[3000,'400 kcmil'],[4000,'500 kcmil'],[5000,'700 kcmil'],[6000,'800 kcmil']];
+      for (var i = 0; i < t.length; i++) if (ocpd <= t[i][0]) return t[i][1] + ' Cu';
+      return '—';
+    }
+
+    /* ---------- 01 FAULT CURRENT ---------- */
+    function updFault() {
+      var kva = num($('fKva'), 0), v = num($('fVolt'), 0), z = num($('fZ'), 0);
+      if (kva > 0 && v > 0 && z > 0) {
+        var fla = kva * 1000 / (Math.sqrt(3) * v);
+        var isc = fla / (z / 100);
+        $('fFlaOut').textContent = fmt(fla, 0) + ' A';
+        $('fIscOut').textContent = fmt(isc / 1000, 2) + ' kA';
+        $('fMvaOut').textContent = fmt((kva / 1000) / (z / 100), 2) + ' MVA';
+      } else { $('fFlaOut').textContent = $('fIscOut').textContent = $('fMvaOut').textContent = '—'; }
+    }
+    on(['fKva','fVolt','fZ'], 'input', updFault);
+
+    /* ---------- 02 AC POWER ---------- */
+    var pwPhase = 3;
+    document.querySelectorAll('[data-pw-phase]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        pwPhase = parseInt(segState('data-pw-phase', b), 10);
+        $('pwVLabel').textContent = pwPhase === 3 ? 'Line-to-line voltage (V)' : 'Voltage (V)';
+        updPower();
+      });
+    });
+    function updPower() {
+      var v = num($('pwV'), 0), i = num($('pwI'), 0), pf = num($('pwPf'), 0);
+      if (v > 0 && i >= 0 && pf >= 0 && pf <= 1) {
+        var s = (pwPhase === 3 ? Math.sqrt(3) * v * i : v * i) / 1000;
+        $('pwKwOut').textContent = fmt(s * pf) + ' kW';
+        $('pwKvaOut').textContent = fmt(s) + ' kVA';
+        $('pwKvarOut').textContent = fmt(s * Math.sqrt(Math.max(0, 1 - pf * pf))) + ' kVAR';
+      } else { $('pwKwOut').textContent = $('pwKvaOut').textContent = $('pwKvarOut').textContent = '—'; }
+    }
+    on(['pwV','pwI','pwPf'], 'input', updPower);
+
+    /* ---------- 03 VOLTAGE DROP ---------- */
+    var vdMat = 'cu';
+    document.querySelectorAll('[data-vd-mat]').forEach(function (b) {
+      b.addEventListener('click', function () { vdMat = segState('data-vd-mat', b); updVd(); });
+    });
+    var VD_CM = { cu: {'14':4110,'12':6530,'10':10380,'8':16510,'6':26240,'4':41740,'3':52620,'2':66360,'1':83690,'1/0':105600,'2/0':133100,'3/0':167800,'4/0':211600,'250':250000,'300':300000,'350':350000,'400':400000,'500':500000,'600':600000,'750':750000},
+                 al: {'12':6530,'10':10380,'8':16510,'6':26240,'4':41740,'3':52620,'2':66360,'1':83690,'1/0':105600,'2/0':133100,'3/0':167800,'4/0':211600,'250':250000,'300':300000,'350':350000,'400':400000,'500':500000,'600':600000,'750':750000} };
+    function fillVdSizes() {
+      var sel = $('vdSize'), cur = sel.value;
+      sel.innerHTML = '';
+      Object.keys(VD_CM[vdMat]).forEach(function (s) {
+        var o = document.createElement('option'); o.value = s;
+        o.textContent = /^\d+$/.test(s) && s.length <= 2 ? '#' + s + (vdMat === 'al' ? ' Al' : '') : s + ' kcmil' + (vdMat === 'al' ? ' Al' : '');
+        sel.appendChild(o);
+      });
+      sel.value = VD_CM[vdMat][cur] ? cur : '4';
+    }
+    function updVd() {
+      var parts = $('vdSys').value.split(','), v = parseFloat(parts[0]), ph = parseInt(parts[1], 10);
+      var L = num($('vdFt'), 0), I = num($('vdAmps'), 0), size = $('vdSize').value;
+      var K = vdMat === 'cu' ? 12.9 : 21.2, cm = VD_CM[vdMat][size];
+      if (v > 0 && L > 0 && I >= 0 && cm) {
+        var vd = (ph === 3 ? Math.sqrt(3) : 2) * K * I * L / cm;
+        var pct = vd / v * 100;
+        $('vdVoltsOut').textContent = fmt(vd, 2) + ' V';
+        $('vdPctOut').textContent = fmt(pct, 2) + ' %';
+        $('vdRecvOut').textContent = fmt(v - vd, 1) + ' V';
+        var box = $('vdVerdict'), t = $('vdVerdictTitle'), c = $('vdVerdictCopy');
+        box.hidden = false;
+        if (pct <= 3) { box.className = 'verdict ok'; t.textContent = 'Within 3% — good'; c.textContent = 'Meets the common branch/feeder design target.'; }
+        else if (pct <= 5) { box.className = 'verdict info'; t.textContent = '3–5% — check combined path'; c.textContent = 'OK for one segment if feeder + branch stays under 5% total.'; }
+        else { box.className = 'verdict warn'; t.textContent = 'Over 5% — upsize'; c.textContent = 'Exceeds the combined feeder + branch guidance. Increase conductor size or shorten the run.'; }
+      } else { $('vdVoltsOut').textContent = $('vdPctOut').textContent = $('vdRecvOut').textContent = '—'; $('vdVerdict').hidden = true; }
+    }
+    $('vdSys').addEventListener('change', updVd);
+    on(['vdFt','vdAmps'], 'input', updVd);
+    $('vdSize').addEventListener('change', updVd);
+    fillVdSizes(); $('vdSize').value = '4';
+
+    /* ---------- 04 KVA/AMPS ---------- */
+    var kvaDir = 'toA', kvaPh = 3;
+    document.querySelectorAll('[data-kva-dir]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        kvaDir = segState('data-kva-dir', b);
+        $('kvaInLabel').textContent = kvaDir === 'toA' ? 'Apparent power (kVA)' : 'Current (A)';
+        $('kvaOutLabel').textContent = kvaDir === 'toA' ? 'Current' : 'Apparent power';
+        updKva();
+      });
+    });
+    document.querySelectorAll('[data-kva-ph]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        kvaPh = parseInt(segState('data-kva-ph', b), 10);
+        $('kvaVLabel').textContent = kvaPh === 3 ? 'Voltage L–L (V)' : 'Voltage (V)';
+        updKva();
+      });
+    });
+    function updKva() {
+      var v = num($('kvaV'), 0), x = num($('kvaIn'), 0), k = kvaPh === 3 ? Math.sqrt(3) : 1;
+      if (v > 0 && x >= 0) {
+        $('kvaOut').textContent = kvaDir === 'toA' ? fmt(x * 1000 / (k * v), 1) + ' A' : fmt(x * k * v / 1000, 2) + ' kVA';
+      } else $('kvaOut').textContent = '—';
+    }
+    on(['kvaV','kvaIn'], 'input', updKva);
+
+    /* ---------- 05 CONDUIT FILL ---------- */
+    function cfArea() {
+      var id = CONDUIT_ID[$('cfType').value][$('cfSize').value];
+      return Math.PI * Math.pow(id / 2, 2);
+    }
+    function cfRow(size, qty) {
+      var row = document.createElement('div');
+      row.className = 'wire-row';
+      var f1 = document.createElement('div'); f1.className = 'field';
+      var l1 = document.createElement('label'); l1.textContent = 'Size';
+      var s1 = document.createElement('select');
+      WIRE_SIZES.forEach(function (s) { var o = document.createElement('option'); o.value = s; o.textContent = /^\d+$/.test(s) && s.length <= 2 ? '#' + s : s + ' kcmil'; s1.appendChild(o); });
+      s1.value = size || '12'; f1.appendChild(l1); f1.appendChild(s1);
+      var f2 = document.createElement('div'); f2.className = 'field';
+      var l2 = document.createElement('label'); l2.textContent = 'Qty';
+      var i2 = document.createElement('input'); i2.type = 'number'; i2.min = '1'; i2.max = '999'; i2.value = qty || 3; i2.setAttribute('inputmode', 'numeric');
+      f2.appendChild(l2); f2.appendChild(i2);
+      var f3 = document.createElement('div'); f3.className = 'field';
+      var l3 = document.createElement('label'); l3.textContent = 'Area';
+      var o3 = document.createElement('output'); o3.style.cssText = 'min-height:44px;display:flex;align-items:center;font:600 14px "IBM Plex Mono",monospace;';
+      f3.appendChild(l3); f3.appendChild(o3);
+      var del = document.createElement('button'); del.type = 'button'; del.className = 'icon-btn'; del.textContent = '×'; del.title = 'Remove row';
+      del.addEventListener('click', function () { row.remove(); updFill(); });
+      row.appendChild(f1); row.appendChild(f2); row.appendChild(f3); row.appendChild(del);
+      s1.addEventListener('change', updFill); i2.addEventListener('input', updFill);
+      row._get = function () { return { area: CU_AREA[s1.value] || 0, qty: Math.max(0, parseInt(i2.value, 10) || 0), out: o3 }; };
+      return row;
+    }
+    function updFill() {
+      var rows = Array.from($('cfRows').children);
+      var total = 0, count = 0;
+      rows.forEach(function (r) { var g = r._get(); total += g.area * g.qty; count += g.qty; g.out.textContent = fmt(g.area * g.qty, 4) + ' in²'; });
+      var ca = cfArea();
+      var limit = count <= 1 ? 0.53 : count === 2 ? 0.31 : 0.40;
+      var pct = ca > 0 ? total / ca * 100 : 0;
+      $('cfPctOut').textContent = fmt(pct, 1) + ' %';
+      $('cfAreaOut').textContent = fmt(total, 4) + ' in²';
+      $('cfCondOut').textContent = fmt(ca, 3) + ' in²';
+      // max # of smallest entered size at 40% — use first row's size as reference
+      var refA = rows.length ? rows[0]._get().area : CU_AREA['12'];
+      $('cfMaxOut').textContent = refA > 0 ? Math.floor(ca * 0.40 / refA) + ' max' : '—';
+      var box = $('cfVerdict'), t = $('cfVerdictTitle'), c = $('cfVerdictCopy');
+      box.hidden = false;
+      if (count === 0) { box.hidden = true; return; }
+      if (total <= ca * limit + 1e-9) {
+        box.className = 'verdict ok'; t.textContent = 'Compliant — ' + fmt(pct, 1) + '% ≤ ' + Math.round(limit * 100) + '%';
+        c.textContent = count + ' conductor' + (count === 1 ? '' : 's') + ' at the ' + Math.round(limit * 100) + '% fill limit.';
+      } else {
+        box.className = 'verdict warn'; t.textContent = 'Overfilled — ' + fmt(pct, 1) + '% > ' + Math.round(limit * 100) + '%';
+        c.textContent = 'Reduce conductors or increase conduit size.';
+      }
+    }
+    $('cfAdd').addEventListener('click', function () { $('cfRows').appendChild(cfRow('12', 3)); updFill(); });
+    $('cfType').addEventListener('change', updFill); $('cfSize').addEventListener('change', updFill);
+    $('cfRows').appendChild(cfRow('12', 3));
+
+    /* ---------- 06 AMPACITY ---------- */
+    var amMat = 'cu';
+    document.querySelectorAll('[data-am-mat]').forEach(function (b) {
+      b.addEventListener('click', function () { amMat = segState('data-am-mat', b); fillAmSizes(); updAmp(); });
+    });
+    function fillAmSizes() {
+      var sel = $('amSize'), cur = sel.value;
+      sel.innerHTML = '';
+      Object.keys(AMP).forEach(function (s) {
+        if (!AMP[s][amMat]) return;
+        var o = document.createElement('option'); o.value = s;
+        o.textContent = /^\d+$/.test(s) && s.length <= 2 ? '#' + s + (amMat === 'al' ? ' Al' : '') : s + ' kcmil' + (amMat === 'al' ? ' Al' : '');
+        sel.appendChild(o);
+      });
+      if (cur && AMP[cur] && AMP[cur][amMat]) sel.value = cur; else sel.value = amMat === 'cu' ? '4' : '2';
+    }
+    function updAmp() {
+      var size = $('amSize').value, tr = $('amTemp').value, amb = parseInt($('amAmb').value, 10), n = Math.max(1, parseInt($('amCount').value, 10) || 1);
+      var entry = AMP[size] && AMP[size][amMat];
+      if (!entry) { $('amOut').textContent = '—'; return; }
+      var col = tr === '60' ? 0 : tr === '75' ? 1 : 2;
+      var base = entry[col];
+      var corr = tr === '60' ? 1 : (AMB_CORR[tr][amb] !== undefined ? AMB_CORR[tr][amb] : 1);
+      var adj = adjFactor(n);
+      var final = base * corr * adj;
+      $('amBaseOut').textContent = base + ' A';
+      $('amCorrOut').textContent = '× ' + corr.toFixed(2);
+      $('amAdjOut').textContent = '× ' + adj.toFixed(2) + (n > 3 ? ' (' + n + ' CCC)' : '');
+      $('amOut').textContent = fmt(final, 0) + ' A';
+    }
+    $('amTemp').addEventListener('change', updAmp); $('amAmb').addEventListener('change', updAmp);
+    $('amSize').addEventListener('change', updAmp); $('amCount').addEventListener('input', updAmp);
+    fillAmSizes();
+
+    /* ---------- 07 MOTOR ---------- */
+    var moPh = 3;
+    document.querySelectorAll('[data-mo-ph]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        moPh = parseInt(segState('data-mo-ph', b), 10);
+        var sel = $('moV'); sel.innerHTML = '';
+        (moPh === 3 ? ['208','230','460','575'] : ['115','208','230']).forEach(function (v) {
+          var o = document.createElement('option'); o.value = v; o.textContent = v; sel.appendChild(o);
+        });
+        sel.value = moPh === 3 ? '460' : '230';
+        var hp = $('moHp'); hp.innerHTML = '';
+        Object.keys(moPh === 3 ? MOTOR_FLA_460 : MOTOR_FLA_230_1P).forEach(function (h) {
+          var o = document.createElement('option'); o.value = h; o.textContent = h; hp.appendChild(o);
+        });
+        hp.value = moPh === 3 ? '5' : '3';
+        updMotor();
+      });
+    });
+    $('moV').addEventListener('change', updMotor);
+    $('moHp').addEventListener('change', updMotor);
+    function updMotor() {
+      var hp = $('moHp').value, v = parseFloat($('moV').value);
+      var fla;
+      if (moPh === 3) fla = (MOTOR_FLA_460[hp] || 0) * 460 / v;
+      else fla = (MOTOR_FLA_230_1P[hp] || 0) * 230 / v;
+      if (!(fla > 0)) { $('moFlaOut').textContent = '—'; return; }
+      $('moFlaOut').textContent = fmt(fla, 1) + ' A';
+      $('moCondOut').textContent = fmt(fla * 1.25, 1) + ' A min';
+      $('moBrkOut').textContent = nextStdUp(fla * 2.50) + ' A';
+      $('moFuseOut').textContent = nextStdUp(fla * 1.75) + ' A';
+    }
+
+    /* ---------- 08 PF CORRECTION ---------- */
+    function updPf() {
+      var kw = num($('pfKw'), 0), p1 = num($('pf1'), 0), p2 = num($('pf2'), 0);
+      if (kw > 0 && p1 > 0 && p1 <= 1 && p2 > 0 && p2 <= 1) {
+        var kvar = kw * (Math.tan(Math.acos(p1)) - Math.tan(Math.acos(p2)));
+        $('pfKvarOut').textContent = fmt(Math.max(0, kvar), 1) + ' kVAR';
+        $('pfKva1Out').textContent = fmt(kw / p1, 1) + ' kVA';
+        $('pfKva2Out').textContent = fmt(kw / p2, 1) + ' kVA';
+      } else { $('pfKvarOut').textContent = $('pfKva1Out').textContent = $('pfKva2Out').textContent = '—'; }
+    }
+    on(['pfKw','pf1','pf2'], 'input', updPf);
+
+    /* ---------- 09 TRANSFORMER OCPD ---------- */
+    var xfPh = 3;
+    document.querySelectorAll('[data-xf-ph]').forEach(function (b) {
+      b.addEventListener('click', function () { xfPh = parseInt(segState('data-xf-ph', b), 10); updXfmr(); });
+    });
+    function updXfmr() {
+      var kva = parseFloat($('xfKva').value), vp = num($('xfPri'), 0), vs = num($('xfSec'), 0);
+      if (kva > 0 && vp > 0 && vs > 0) {
+        var k = xfPh === 3 ? Math.sqrt(3) : 1;
+        var flaP = kva * 1000 / (k * vp), flaS = kva * 1000 / (k * vs);
+        $('xfPriFlaOut').textContent = fmt(flaP, 1) + ' A';
+        $('xfSecFlaOut').textContent = fmt(flaS, 1) + ' A';
+        $('xfPriOcOut').textContent = nextStdUp(flaP * 1.25) + ' A max';
+        $('xfSecOcOut').textContent = nextStdUp(flaS * 1.25) + ' A max';
+      } else { $('xfPriFlaOut').textContent = $('xfSecFlaOut').textContent = $('xfPriOcOut').textContent = $('xfSecOcOut').textContent = '—'; }
+    }
+    $('xfKva').addEventListener('change', updXfmr);
+    on(['xfPri','xfSec'], 'input', updXfmr);
+
+    /* ---------- 10 PULL BOX ---------- */
+    var bxType = 'straight';
+    document.querySelectorAll('[data-bx-type]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        bxType = segState('data-bx-type', b);
+        $('bxOthersWrap').hidden = bxType !== 'angle';
+        updBox();
+      });
+    });
+    function tradeIn(s) {
+      var m = {'1/2':0.5,'3/4':0.75,'1':1,'1-1/4':1.25,'1-1/2':1.5,'2':2,'2-1/2':2.5,'3':3,'3-1/2':3.5,'4':4};
+      return m[String(s).trim()] || 0;
+    }
+    function updBox() {
+      var big = tradeIn($('bxLargest').value);
+      if (!(big > 0)) { $('bxOut').textContent = '—'; return; }
+      if (bxType === 'straight') {
+        $('bxOut').textContent = fmt(8 * big, 1) + ' in min length';
+        $('bxRuleOut').textContent = '8 × ' + $('bxLargest').value + ' in';
+      } else {
+        var others = $('bxOthers').value.split(',').map(tradeIn).filter(function (x) { return x > 0; });
+        var sum = others.reduce(function (a, b) { return a + b; }, 0);
+        $('bxOut').textContent = fmt(6 * big + sum, 1) + ' in min';
+        $('bxRuleOut').textContent = '6 × ' + $('bxLargest').value + ' + ' + fmt(sum, 2);
+      }
+    }
+    $('bxLargest').addEventListener('change', updBox);
+    $('bxOthers').addEventListener('input', updBox);
+
+    /* ---------- 11 GROUNDING ---------- */
+    function fillGrSvc() {
+      var sel = $('grSvc');
+      ['2','1','1/0','2/0','3/0','4/0','250','300','350','400','500','600','750'].forEach(function (s, i) {
+        var o = document.createElement('option'); o.value = s;
+        o.textContent = /^\d+$/.test(s) && s.length <= 2 ? '#' + s : s + ' kcmil';
+        if (i === 5) o.selected = true;
+        sel.appendChild(o);
+      });
+    }
+    function updGround() {
+      $('grGecOut').textContent = gec25066($('grSvc').value);
+      $('grEgcOut').textContent = egc250122(parseInt($('grOcpd').value, 10));
+    }
+    $('grSvc').addEventListener('change', updGround);
+    $('grOcpd').addEventListener('change', updGround);
+    fillGrSvc();
+
+    /* ---------- init ---------- */
+    updFault(); updPower(); updVd(); updKva(); updFill(); updAmp(); updMotor(); updPf(); updXfmr(); updBox(); updGround();
+  })();
+  </script>
+</body>
+</html>
